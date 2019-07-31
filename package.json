@@ -3,17 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "serve": "vue-cli-service serve",
+    "serve": "vue-cli-service serve -open",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
     "amfe-flexible": "^2.2.1",
+    "axios": "^0.19.0",
     "core-js": "^2.6.5",
     "vant": "^2.0.9",
     "vue": "^2.6.10",
     "vue-router": "^3.0.3",
-    "vuex": "^3.0.1"
+    "vuex": "^3.1.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.9.0",
@@ -25,8 +26,10 @@
     "eslint-plugin-vue": "^5.0.0",
     "less": "^3.0.4",
     "less-loader": "^4.1.0",
+    "lib-flexible": "^0.3.2",
     "lint-staged": "^8.1.5",
     "postcss-pxtorem": "^4.0.1",
+    "vee-validate": "^2.2.13",
     "vue-template-compiler": "^2.6.10"
   },
   "gitHooks": {

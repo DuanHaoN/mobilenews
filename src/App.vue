@@ -1,21 +1,17 @@
 <template>
-  <div id="app">
-    <van-button type="info">信息按钮</van-button>
-    <div class="box"></div>
-  </div>
+ <div>
+   <keep-alive>
+      <router-view></router-view>
+
+   </keep-alive>
+ </div>
 </template>
 
 <script>
-
 export default {
-
+  name: 'App'
 }
 </script>
 
-<style lang="less">
-.box{
-  width: 100px;
-  height: 100px;
-  background: gold;
-}
+<style lang='less' scoped>
 </style>

@@ -5,6 +5,22 @@ Vue.use(Router)
 
 export default new Router({
   routes: [
+    {
+      path: '/',
+      component: () => import('@/views/tabBar'),
+      children: [
+        {
+          path: '/',
+          name: 'home',
+          component: () => import('@/views/home')
+        }
+      ]
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: () => import('@/views/login')
+    }
 
   ]
 })
