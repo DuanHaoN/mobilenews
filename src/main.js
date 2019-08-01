@@ -2,11 +2,20 @@ import Vue from 'vue'
 import App from './App.vue'
 import 'amfe-flexible/index.min.js'
 import router from './router'
-import Vant from 'vant'
+import Vant, { Lazyload } from 'vant'
 import 'vant/lib/index.css'
 import VeeValidate, { Validator } from 'vee-validate'
 import CN from 'vee-validate/dist/locale/zh_CN'
 import store from './store'
+import dayjs from 'dayjs'
+import relaviveTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/zh-cn'
+dayjs.locale('zh-cn')
+dayjs.extend(relaviveTime)
+
+Vue.filter('relTime', (value) => {
+  return dayjs().from(dayjs(value))
+})
 
 // 解决异步
 Vue.prototype.$sleep = (time) => {
@@ -18,6 +27,7 @@ Vue.prototype.$sleep = (time) => {
 }
 
 Vue.use(VeeValidate)
+Vue.use(Lazyload)
 
 Validator.localize('zh_CN', CN)
 

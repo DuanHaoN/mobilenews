@@ -9,10 +9,11 @@ const request = axios.create({
 request.interceptors.request.use(function (config) {
   // 如果是非登录请求---------设置请求头
   const { user } = store.state
-  if (config !== '/app/v1_0/authorizations') {
+  if (config.url !== '/app/v1_0/authorizations') {
     // 设置请求头
     if (user) {
       config.headers.Authorization = `Bearer ${user.token}`
+      console.log('请求地址为：' + config.url + '  携带请求头')
     }
   }
   // const { user } = store.state

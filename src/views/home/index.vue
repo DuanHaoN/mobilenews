@@ -2,18 +2,43 @@
   <div class="app">
     <van-nav-bar title="首页|搜索" fixed />
     <van-tabs v-model="activeChannelIndex" class="channel-tabs">
-      <van-tab :title="item.name"
-      v-for='item in channels'
-      :key='item.id'
-      >
+      <van-tab :title="item.name" v-for="item in channels" :key="item.id">
         <van-pull-refresh v-model="item.downPullLoading" @refresh="onRefresh">
           <!-- 列表  van-list -->
-          <van-list v-model="item.upPullLoading" :finished="item.upPullFinished" finished-text="没有更多了" @load="onLoad">
-            <van-cell v-for="item in item.articles" :key="item.aut_id" :title="item.title" />
+          <van-list
+            v-model="item.upPullLoading"
+            :finished="item.upPullFinished"
+            finished-text="没有更多了"
+            @load="onLoad"
+          >
+            <!-- <van-cell v-for="item in activeChannel.articles" :key="item.aut_id" :title="item.title" /> -->
+            <van-cell v-for="item in activeChannel.articles" :key="item.art_id" :title="item.title">
+              <div slot="label">
+                <template v-show="item.cover.type">
+                  <van-grid :border="false" :column-num="3">
+                    <van-grid-item v-for="(item,index) in item.cover.images" :key="index">
+                      <van-image :src="item" lazy-load />
+                    </van-grid-item>
+                  </van-grid>
+                </template>
+
+                <p>
+                  <span>作者:{{item.aut_name}}</span>
+                  &nbsp;
+                  <span>评论 :{{item.comm_count}}</span>
+                  &nbsp;
+                  <span>时间:{{item.pubdate | relTime }}</span>
+                  &nbsp;
+                  <van-icon class="close" name="cross" @click="showMoreActionDia()"></van-icon>
+
+                  <!-- 更多操作 -->
+                  <more-action v-model="isMoreActionShow"></more-action>
+                </p>
+              </div>
+            </van-cell>
           </van-list>
         </van-pull-refresh>
       </van-tab>
-
     </van-tabs>
   </div>
 </template>
@@ -22,8 +47,12 @@
 import { mapState } from 'vuex'
 import { getChannelsUserOrDefaults } from '@/api/channel.js'
 import { getArticles } from '@/api/article.js'
+import MoreAction from './more-action'
 export default {
   name: 'home',
+  components: {
+    MoreAction
+  },
   data () {
     return {
       activeChannelIndex: 0,
@@ -31,26 +60,36 @@ export default {
       finished: false,
       list: [],
       isLoading: false,
-      channels: []
+      channels: [],
+      isMoreActionShow: false
       // activeChannel: null
     }
   },
   methods: {
     async onLoad () {
+      // const data = this.loadArticles()
+      // console.log(data)
       this.$sleep(800)
       // 异步更新数据
       let data = []
       data = await this.loadArticles()
-      console.log(data)
-      if (data.pre_timestamp && data.results.length === 0) {
-        this.activeChannel.timestamp = data.pre_timestamp
-        data = await this.loadArticles
-      }
-      if (!data.pre_timestamp) {
+      if (!data.pre_timestamp && !data.results.length) {
         this.activeChannel.upPullLoading = false
         this.activeChannel.upPullFinished = true
         return
       }
+      // console.log(data)
+      if (data.pre_timestamp && data.results.length === 0) {
+        this.activeChannel.timestamp = data.pre_timestamp
+        console.log('改变时间戳，重新获取频道文章')
+        data = await this.loadArticles()
+        console.log(data)
+      }
+      // if (!data.pre_timestamp) {
+      //   this.activeChannel.upPullLoading = false
+      //   this.activeChannel.upPullFinished = true
+      //   return
+      // }
       this.activeChannel.timestamp = data.pre_timestamp
       // data.results = [{}]
       // const temp = [...data.results]
@@ -69,6 +108,9 @@ export default {
       // }, 500)
       this.activeChannel.upPullLoading = false
     },
+    showMoreActionDia () {
+      this.isMoreActionShow = true
+    },
     onRefresh () {
       setTimeout(() => {
         this.$toast('刷新成功')
@@ -79,55 +121,68 @@ export default {
     async loadArticles () {
       // 判断是否有token值
       // const {user} = state.
-      console.log('this.activeChannel', this.activeChannel)
+      // console.log('this.activeChannel', this.activeChannel)
       const { id: channel_id, timestamp } = this.activeChannel
       const data = await getArticles({
         channel_id,
-        timestamp: Date.now(),
+        timestamp,
         // timestamp,
         with_top: 1
       })
-      console.log(data)
+      // console.log(data)
       return data
     },
     // 判断用户是否登录--------登录了，直接获取用户的频道列表-----------没有登录，判断是否有本地缓存数据-----------没有就重新获取
 
     async loadChannels () {
-      const lsChannels = JSON.parse(window.localStorage.getItem('channels'))
+      // 获取本地频道数据
+      const localChannels = JSON.parse(window.localStorage.getItem('channels'))
       try {
-      // let channels = []
-        if (this.user) {
-          // 如果登陆了
-
+        if (!this.user && localChannels) this.channels = localChannels
+        if (this.user || (!this.user && !localChannels)) {
           const data = await getChannelsUserOrDefaults()
           data.channels.forEach(item => {
+            item.articles = []
             item.downPullLoading = false
             item.upPullLoading = false
             item.upPullFinished = false
-            item.articles = []
+            item.timestamp = Date.now()
           })
           this.channels = data.channels
-          console.log('登陆了的频道', this.channels)
-        } else {
-          // 如果没登录
-          if (lsChannels) {
-            // 本地有数据
-            console.log('使用本地数据')
-            this.channels = lsChannels
-          } else {
-            // 本地没数据
-            const data = await getChannelsUserOrDefaults()
-            data.channels.forEach(item => {
-              item.downPullLoading = false
-              item.upPullLoading = false
-              item.upPullFinished = false
-              item.timestamp = Date.now()
-              item.articles = []
-            })
-            this.channels = data.channels
-            console.log('没有登录的频道', this.channels)
-          }
         }
+        // let channels = []
+        // if (this.user) {
+        //   // 如果登陆了
+
+        //   const data = await getChannelsUserOrDefaults()
+        //   data.channels.forEach(item => {
+        //     item.downPullLoading = false
+        //     item.upPullLoading = false
+        //     item.upPullFinished = false
+        //     item.articles = []
+        //   })
+        //   this.channels = data.channels
+        //   console.log('登陆了的频道', this.channels)
+        // } else {
+        //   // 如果没登录
+        //   if (localChannels) {
+        //     // 本地有数据
+        //     console.log('使用本地数据')
+        //     this.channels = localChannels
+        //   } else {
+        //     // 本地没数据
+        //     const data = await getChannelsUserOrDefaults()
+        //     data.channels.forEach(item => {
+        //       item.downPullLoading = false
+        //       item.upPullLoading = false
+        //       item.upPullFinished = false
+        //       item.timestamp = Date.now()
+        //       item.articles = []
+        //     })
+        //     this.channels = data.channels
+        //     console.log('没有登录的频道', this.channels)
+        //   }
+        // }
         // console.log(this.channels)
       } catch (error) {
         console.dir(error)
@@ -142,6 +197,9 @@ export default {
     // 获取当前激活频道的对象
     activeChannel () {
       // 在频道列表中，根据当前激活的索引不同，获取channel
+      console.log(
+        '当前激活的文章频道为：' + this.channels[this.activeChannelIndex]
+      )
       return this.channels[this.activeChannelIndex]
     }
   },
@@ -177,5 +235,9 @@ export default {
 // 调整tabs的内容的位置
 .channel-tabs /deep/ .van-tabs__content {
   margin-top: 200px;
+}
+.channel-tabs /deep/ .close {
+  float: right;
+  font-size: 30px;
 }
 </style>
