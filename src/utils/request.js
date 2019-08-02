@@ -1,9 +1,20 @@
 // 配置axios
 import axios from 'axios'
 import store from '@/store.js'
+import JSONBig from 'json-bigint'
+
 const request = axios.create({
   baseURL: 'http://ttapi.research.itcast.cn'
 })
+
+// 响应转换器
+request.defaults.transformResponse = [function (data) {
+  try {
+    return JSONBig.parse(data)
+  } catch (error) {
+    return data
+  }
+}]
 
 // 请求拦截器
 request.interceptors.request.use(function (config) {
@@ -13,7 +24,7 @@ request.interceptors.request.use(function (config) {
     // 设置请求头
     if (user) {
       config.headers.Authorization = `Bearer ${user.token}`
-      console.log('请求地址为：' + config.url + '  携带请求头')
+      // console.log('请求地址为：' + config.url + '  携带请求头')
     }
   }
   // const { user } = store.state

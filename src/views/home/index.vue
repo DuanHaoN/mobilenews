@@ -2,8 +2,15 @@
   <div class="app">
     <van-nav-bar title="首页|搜索" fixed />
     <van-tabs v-model="activeChannelIndex" class="channel-tabs">
+      <div slot="nav-right" class="wap-nav">
+        <van-icon name="wap-nav" @click="showChannel"></van-icon>
+      </div>
       <van-tab :title="item.name" v-for="item in channels" :key="item.id">
-        <van-pull-refresh v-model="item.downPullLoading" @refresh="onRefresh">
+        <van-pull-refresh
+          v-model="item.downPullLoading"
+          :downPullSuccessText="downPullSuccessText"
+          @refresh="onRefresh"
+        >
           <!-- 列表  van-list -->
           <van-list
             v-model="item.upPullLoading"
@@ -12,7 +19,11 @@
             @load="onLoad"
           >
             <!-- <van-cell v-for="item in activeChannel.articles" :key="item.aut_id" :title="item.title" /> -->
-            <van-cell v-for="item in activeChannel.articles" :key="item.art_id" :title="item.title">
+            <van-cell
+              v-for="item in activeChannel.articles"
+              :key="item.art_id.toString()"
+              :title="item.title"
+            >
               <div slot="label">
                 <template v-show="item.cover.type">
                   <van-grid :border="false" :column-num="3">
@@ -29,10 +40,19 @@
                   &nbsp;
                   <span>时间:{{item.pubdate | relTime }}</span>
                   &nbsp;
-                  <van-icon class="close" name="cross" @click="showMoreActionDia()"></van-icon>
+                  <van-icon class="close" name="cross" @click="showMoreActionDia(item)"></van-icon>
 
                   <!-- 更多操作 -->
-                  <more-action v-model="isMoreActionShow"></more-action>
+                  <more-action
+                    v-model="isMoreActionShow"
+                    :currentArticles="currentArticles"
+                    @handleUnlike="handleUnlikeArticle"
+                  ></more-action>
+
+                  <channel v-model="isChannelShow"
+                  :channels='channels'
+                  :active-index='activeChannelIndex'
+                  ></channel>
                 </p>
               </div>
             </van-cell>
@@ -48,10 +68,12 @@ import { mapState } from 'vuex'
 import { getChannelsUserOrDefaults } from '@/api/channel.js'
 import { getArticles } from '@/api/article.js'
 import MoreAction from './more-action'
+import Channel from './channel'
 export default {
   name: 'home',
   components: {
-    MoreAction
+    MoreAction,
+    Channel
   },
   data () {
     return {
@@ -61,7 +83,10 @@ export default {
       list: [],
       isLoading: false,
       channels: [],
-      isMoreActionShow: false
+      isMoreActionShow: false,
+      currentArticles: null,
+      downPullSuccessText: '',
+      isChannelShow: false
       // activeChannel: null
     }
   },
@@ -81,9 +106,9 @@ export default {
       // console.log(data)
       if (data.pre_timestamp && data.results.length === 0) {
         this.activeChannel.timestamp = data.pre_timestamp
-        console.log('改变时间戳，重新获取频道文章')
+        // console.log('改变时间戳，重新获取频道文章')
         data = await this.loadArticles()
-        console.log(data)
+        // console.log(data)
       }
       // if (!data.pre_timestamp) {
       //   this.activeChannel.upPullLoading = false
@@ -108,14 +133,42 @@ export default {
       // }, 500)
       this.activeChannel.upPullLoading = false
     },
-    showMoreActionDia () {
-      this.isMoreActionShow = true
+    showChannel () {
+      this.isChannelShow = true
     },
-    onRefresh () {
-      setTimeout(() => {
-        this.$toast('刷新成功')
-        this.isLoading = false
-      }, 500)
+    handleUnlikeArticle () {
+      // 找到当前文章的索引，从数据中移除
+      // console.log(this.activeChannel)
+      const cuIndex = this.activeChannel.articles.findIndex(item => {
+        return item === this.currentArticles
+      })
+      // console.log(cuIndex)
+      this.activeChannel.articles.splice(cuIndex, 1)
+    },
+    showMoreActionDia (item) {
+      this.isMoreActionShow = true
+      // console.log(item)
+      this.currentArticles = item
+    },
+    async onRefresh () {
+      // setTimeout(() => {
+      //   this.$toast('刷新成功')
+      //   this.isLoading = false
+      // }, 500)
+      // 备份上次时间戳
+      const timestamp = this.activeChannel.timestamp
+      this.activeChannel.timestamp = Date.now()
+      const data = await this.loadArticles()
+      // console.log(data)
+      if (data.results.length) {
+        this.activeChannel.articles = data.results
+        this.activeChannel.timestamp = timestamp
+        this.activeChannel.downPullSuccessText = '更新成功'
+        this.onLoad()
+      } else {
+        this.activeChannel.downPullSuccessText = '已是最新数据'
+      }
+      this.activeChannel.downPullLoading = false
     },
     // 获取频道列表
     async loadArticles () {
@@ -197,9 +250,9 @@ export default {
     // 获取当前激活频道的对象
     activeChannel () {
       // 在频道列表中，根据当前激活的索引不同，获取channel
-      console.log(
-        '当前激活的文章频道为：' + this.channels[this.activeChannelIndex]
-      )
+      // console.log(
+      //   '当前激活的文章频道为：' + this.channels[this.activeChannelIndex]
+      // )
       return this.channels[this.activeChannelIndex]
     }
   },
@@ -239,5 +292,9 @@ export default {
 .channel-tabs /deep/ .close {
   float: right;
   font-size: 30px;
+}
+.channel-tabs /deep/ .wap-nav {
+  position: fixed;
+  right: 0px;
 }
 </style>
